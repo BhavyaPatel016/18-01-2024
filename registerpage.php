@@ -69,7 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 ?>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -176,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         <!-- Who are you? -->
         <label for="who">Who are you?</label><br>
-        <input type="radio" id="owner" name="who" value="Owner" onchange="toggleDateFields()"required>
+        <input type="radio" id="owner" name="who" value="Owner" onchange="toggleDateFields()" required>
         <label for="owner" style="display: inline-block; margin-right: 20px;">Owner</label>
         <input type="radio" id="rental" name="who" value="Rental" onchange="toggleDateFields()" required>
         <label for="rental" style="display: inline-block;">Rental</label><br><br>
@@ -218,63 +217,65 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <script>
-     function updateFlats() {
-    const floorSelect = document.getElementById('floor');
-    const flatSelect = document.getElementById('flat');
-    const selectedFloor = floorSelect.value;
-    const ownerRadio = document.getElementById('owner').checked; // Check if Owner is selected
+    let selectedOwnerFlat = null; // Store the selected flat for "Owner"
 
-    // Clear previous flat options
-    flatSelect.innerHTML = '<option value="0">Select The Flat</option>';
+    function updateFlats() {
+        const floorSelect = document.getElementById('floor');
+        const flatSelect = document.getElementById('flat');
+        const selectedFloor = floorSelect.value;
+        const ownerRadio = document.getElementById('owner').checked;
 
-    if (selectedFloor === '0') {
-        flatSelect.disabled = true; // Disable flat dropdown if no floor is selected
-        return; // Don't populate flats if no floor is selected
-    }
+        // Clear previous flat options
+        flatSelect.innerHTML = '<option value="0">Select The Flat</option>';
 
-    flatSelect.disabled = false; // Enable flat dropdown once a floor is selected
+        if (selectedFloor === '0') {
+            flatSelect.disabled = true; // Disable flat dropdown if no floor is selected
+            return; // Don't populate flats if no floor is selected
+        }
 
-    // Make an AJAX request to get the booked flats for the selected floor
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', 'registerpage.php?floor=' + selectedFloor, true);
-    xhr.onload = function() {
-        if (xhr.status === 200) {
-            const bookedFlats = JSON.parse(xhr.responseText);
-            let flats = [];
+        flatSelect.disabled = false; // Enable flat dropdown once a floor is selected
 
-            // Define available flats per floor
-            if (selectedFloor === '1') {
-                flats = ['101', '102', '103', '104'];
-            } else if (selectedFloor === '2') {
-                flats = ['201', '202', '203', '204'];
-            } else if (selectedFloor === '3') {
-                flats = ['301', '302', '303', '304'];
-            } else if (selectedFloor === '4') {
-                flats = ['401', '402', '403', '404'];
-            } else if (selectedFloor === '5') {
-                flats = ['501', '502', '503', '504'];
-            }
+        // Make an AJAX request to get the booked flats for the selected floor
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'registerpage.php?floor=' + selectedFloor, true);
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                const bookedFlats = JSON.parse(xhr.responseText);
+                let flats = [];
 
-            // Populate the flat options based on selected floor
-            flats.forEach(flat => {
-                const option = document.createElement('option');
-                option.value = flat;
-                option.textContent = flat;
-
-                // If the user is an owner, disable the flat if it's already booked
-                if (ownerRadio) {
-                    if (bookedFlats.includes(flat)) {
-                        option.disabled = true;
-                        option.textContent = flat + ' (Booked)';
-                    }
+                // Define available flats per floor
+                if (selectedFloor === '1') {
+                    flats = ['101', '102', '103', '104'];
+                } else if (selectedFloor === '2') {
+                    flats = ['201', '202', '203', '204'];
+                } else if (selectedFloor === '3') {
+                    flats = ['301', '302', '303', '304'];
+                } else if (selectedFloor === '4') {
+                    flats = ['401', '402', '403', '404'];
+                } else if (selectedFloor === '5') {
+                    flats = ['501', '502', '503', '504'];
                 }
 
-                flatSelect.appendChild(option);
-            });
-        }
-    };
-    xhr.send();
-}
+                // Populate the flat options based on selected floor
+                flats.forEach(flat => {
+                    const option = document.createElement('option');
+                    option.value = flat;
+                    option.textContent = flat;
+
+                    // If the user is an owner, disable the flat if it's already booked
+                    if (ownerRadio) {
+                        if (bookedFlats.includes(flat)) {
+                            option.disabled = true;
+                            option.textContent = flat + ' (Booked)';
+                        }
+                    }
+
+                    flatSelect.appendChild(option);
+                });
+            }
+        };
+        xhr.send();
+    }
 
     function toggleDateFields() {
         const ownerRadio = document.getElementById('owner');
@@ -283,23 +284,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         const rentalDateSection = document.getElementById('rentalDateSection');
         const purdate = document.getElementById('purdate');
         const rentdate = document.getElementById('rentdate');
+        const floorSelect = document.getElementById('floor');
+        const flatSelect = document.getElementById('flat');
 
-        // Check if the "Owner" radio is selected
+        // If "Owner" is selected
         if (ownerRadio.checked) {
-            purchaseDateSection.classList.remove('hidden'); // Show purchase date
-            purdate.disabled = false; // Enable purchase date input
-            rentalDateSection.classList.add('hidden'); // Hide rental date
-            rentdate.disabled = true; // Disable rental date input
-        }
-        // Check if the "Rental" radio is selected
+            purchaseDateSection.classList.remove('hidden');
+            purdate.disabled = false;
+            rentalDateSection.classList.add('hidden');
+            rentdate.disabled = true;
+
+            // Clear the floor and flat selection when switching to "Owner" mode
+            floorSelect.value = '0';
+            flatSelect.innerHTML = '<option value="0">Select The Flat</option>';
+        } 
+        // If "Rental" is selected
         else if (rentalRadio.checked) {
-            rentalDateSection.classList.remove('hidden'); // Show rental date
-            rentdate.disabled = false; // Enable rental date input
-            purchaseDateSection.classList.add('hidden'); // Hide purchase date
-            purdate.disabled = true; // Disable purchase date input
-        }
-        else {
-            // If neither "Owner" nor "Rental" is selected, hide both date fields and disable them
+            rentalDateSection.classList.remove('hidden');
+            rentdate.disabled = false;
+            purchaseDateSection.classList.add('hidden');
+            purdate.disabled = true;
+
+            // Clear the floor and flat selection when switching to "Rental" mode
+            floorSelect.value = '0';
+            flatSelect.innerHTML = '<option value="0">Select The Flat</option>';
+        } else {
             purchaseDateSection.classList.add('hidden');
             rentalDateSection.classList.add('hidden');
             purdate.disabled = true;
@@ -317,51 +326,52 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         document.getElementById("purdate").max = today;
         document.getElementById("rentdate").max = today;
     }
+
     function handleSubmit(event) {
-    // Prevent form submission
-    event.preventDefault();
+        // Prevent form submission
+        event.preventDefault();
 
-    // Get form elements
-    const floorSelect = document.getElementById('floor');
-    const flatSelect = document.getElementById('flat');
-    const ownerRadio = document.getElementById('owner');
-    const rentalRadio = document.getElementById('rental');
-    const purchaseDate = document.getElementById('purdate');
-    const rentalDate = document.getElementById('rentdate');
+        // Get form elements
+        const floorSelect = document.getElementById('floor');
+        const flatSelect = document.getElementById('flat');
+        const ownerRadio = document.getElementById('owner');
+        const rentalRadio = document.getElementById('rental');
+        const purchaseDate = document.getElementById('purdate');
+        const rentalDate = document.getElementById('rentdate');
 
-    // Check if floor is selected
-    if (floorSelect.value === '0') {
-        alert("Please select a floor.");
-        return false;
+        // Check if floor is selected
+        if (floorSelect.value === '0') {
+            alert("Please select a floor.");
+            return false;
+        }
+
+        // Check if flat is selected
+        if (flatSelect.value === '0') {
+            alert("Please select a flat.");
+            return false;
+        }
+
+        // Check if either owner or rental is selected
+        if (!ownerRadio.checked && !rentalRadio.checked) {
+            alert("Please select who you are (Owner or Rental).");
+            return false;
+        }
+
+        // Check if purchase date is required and filled
+        if (ownerRadio.checked && purchaseDate.value === '') {
+            alert("Please select a purchase date.");
+            return false;
+        }
+
+        // Check if rental date is required and filled
+        if (rentalRadio.checked && rentalDate.value === '') {
+            alert("Please select a rental date.");
+            return false;
+        }
+
+        // If all validations pass, submit the form
+        event.target.submit();
     }
-
-    // Check if flat is selected
-    if (flatSelect.value === '0') {
-        alert("Please select a flat.");
-        return false;
-    }
-
-    // Check if either owner or rental is selected
-    if (!ownerRadio.checked && !rentalRadio.checked) {
-        alert("Please select who you are (Owner or Rental).");
-        return false;
-    }
-
-    // Check if purchase date is required and filled
-    if (ownerRadio.checked && purchaseDate.value === '') {
-        alert("Please select a purchase date.");
-        return false;
-    }
-
-    // Check if rental date is required and filled
-    if (rentalRadio.checked && rentalDate.value === '') {
-        alert("Please select a rental date.");
-        return false;
-    }
-
-    // If all validations pass, submit the form
-    event.target.submit();
-}
 </script>
 
 </body>
