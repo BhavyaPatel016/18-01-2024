@@ -1,5 +1,4 @@
 <?php
-
 $servername = "localhost";
 $username = "root"; // Update with your database username
 $password = ""; // Update with your database password
@@ -13,11 +12,17 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Fetch already booked flats based on the floor
+// Fetch already booked flats based on the floor and type (owner or rental)
 if (isset($_GET['floor'])) {
     $floor = $_GET['floor'];
+    $who = isset($_GET['who']) ? $_GET['who'] : '';
+
     // Query to get the booked flats for the selected floor
-    $query = "SELECT flat FROM building WHERE floor = ?";
+    if ($who === 'Rental') {
+        $query = "SELECT flat FROM building WHERE floor = ? AND who = 'Rental'"; // Only Rental flats
+    } else {
+        $query = "SELECT flat FROM building WHERE floor = ?"; // Get all booked flats for the floor
+    }
     
     $stmt = $conn->prepare($query);
     $stmt->bind_param("s", $floor);
@@ -41,6 +46,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $who = isset($_POST['who']) ? $_POST['who'] : '';
     $purchaseDate = isset($_POST['purdate']) ? $_POST['purdate'] : ''; // Capture purchase date
     $rentalDate = isset($_POST['rentdate']) ? $_POST['rentdate'] : null; // Capture rental date
+
+    // Validate that the selected flat is available if it's a rental
+    if ($who === 'Rental') {
+        // Check if the flat is already rented
+        $checkRentalQuery = "SELECT * FROM building WHERE flat = ? AND who = 'Rental'";
+        $stmt = $conn->prepare($checkRentalQuery);
+        $stmt->bind_param("s", $flat);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            // If the flat is already rented, return an error message
+            echo "<script>alert('This flat is already rented. Please select a different flat.');</script>";
+            exit;
+        }
+    }
+
+    // Validate that the selected flat is not already rented by another owner
+    if ($who === 'Owner') {
+        // Check if the flat is already rented
+        $checkOwnerQuery = "SELECT * FROM building WHERE flat = ? AND who = 'Rental'";
+        $stmt = $conn->prepare($checkOwnerQuery);
+        $stmt->bind_param("s", $flat);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            // If the flat is already rented, return an error message
+            echo "<script>alert('This flat is already rented and cannot be owned. Please select a different flat.');</script>";
+            exit;
+        }
+    }
 
     // Insert building data into the 'building' table
     $insertBuildingQuery = "INSERT INTO building (floor, flat, who, purchaseDate, rentalDate) 
@@ -224,6 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         const flatSelect = document.getElementById('flat');
         const selectedFloor = floorSelect.value;
         const ownerRadio = document.getElementById('owner').checked;
+        const rentalRadio = document.getElementById('rental').checked;
 
         // Clear previous flat options
         flatSelect.innerHTML = '<option value="0">Select The Flat</option>';
@@ -235,9 +273,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         flatSelect.disabled = false; // Enable flat dropdown once a floor is selected
 
-        // Make an AJAX request to get the booked flats for the selected floor
+        // Set the 'who' parameter based on the radio button selection (Owner or Rental)
+        let who = ownerRadio ? 'Owner' : (rentalRadio ? 'Rental' : '');
+
+        // Make an AJAX request to get the booked flats for the selected floor and who
         const xhr = new XMLHttpRequest();
-        xhr.open('GET', 'registerpage.php?floor=' + selectedFloor, true);
+        xhr.open('GET', 'registerpage.php?floor=' + selectedFloor + '&who=' + who, true);
         xhr.onload = function() {
             if (xhr.status === 200) {
                 const bookedFlats = JSON.parse(xhr.responseText);
@@ -256,20 +297,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     flats = ['501', '502', '503', '504'];
                 }
 
-                // Populate the flat options based on selected floor
+                // Populate the flat options based on selected floor and availability
                 flats.forEach(flat => {
                     const option = document.createElement('option');
                     option.value = flat;
                     option.textContent = flat;
 
-                    // If the user is an owner, disable the flat if it's already booked
+                    // If the user is an owner, disable the flat if it's already rented
                     if (ownerRadio) {
                         if (bookedFlats.includes(flat)) {
                             option.disabled = true;
                             option.textContent = flat + ' (Booked)';
                         }
                     }
-
+                    else if (rentalRadio) {
+                        if (!bookedFlats.includes(flat)) {
+                            option.disabled = true;
+                            option.textContent = flat + ' (No Owner)';
+                        }
+                    }
+                    // Separate validation for rental flats
+                    if (rentalRadio) {
+                        if (bookedFlats.includes(flat)) {
+                            option.disabled = true;
+                            option.textContent = flat + ' (Already Rented)';
+                        }
+                    }
+                    
                     flatSelect.appendChild(option);
                 });
             }
@@ -369,33 +423,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         return true;
     }
 
-    // Validate "Who are you?" Selection (Owner or Rental)
+    // Validate Who Selection (Owner or Rental)
     function validateWhoSelection(ownerRadio, rentalRadio) {
         if (!ownerRadio.checked && !rentalRadio.checked) {
-            alert("Please select who you are (Owner or Rental).");
+            alert("Please select whether you are an Owner or a Rental.");
             return false;
         }
         return true;
     }
 
-    // Validate Purchase Date for Owner
+    // Validate Purchase Date for Owners
     function validatePurchaseDate(ownerRadio, purchaseDate) {
-        if (ownerRadio.checked && purchaseDate.value === '') {
+        if (ownerRadio.checked && !purchaseDate.value) {
             alert("Please select a purchase date.");
             return false;
         }
         return true;
     }
 
-    // Validate Rental Date for Rental
+    // Validate Rental Date for Renters
     function validateRentalDate(rentalRadio, rentalDate) {
-        if (rentalRadio.checked && rentalDate.value === '') {
+        if (rentalRadio.checked && !rentalDate.value) {
             alert("Please select a rental date.");
             return false;
         }
         return true;
     }
 </script>
-
 </body>
 </html>
