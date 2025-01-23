@@ -327,6 +327,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         document.getElementById("rentdate").max = today;
     }
 
+    // Handle form submission and perform validation
     function handleSubmit(event) {
         // Prevent form submission
         event.preventDefault();
@@ -339,38 +340,60 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         const purchaseDate = document.getElementById('purdate');
         const rentalDate = document.getElementById('rentdate');
 
-        // Check if floor is selected
+        // Validate form fields
+        if (!validateFloorSelection(floorSelect)) return false;
+        if (!validateFlatSelection(flatSelect)) return false;
+        if (!validateWhoSelection(ownerRadio, rentalRadio)) return false;
+        if (!validatePurchaseDate(ownerRadio, purchaseDate)) return false;
+        if (!validateRentalDate(rentalRadio, rentalDate)) return false;
+
+        // If all validations pass, submit the form
+        event.target.submit();
+    }
+
+    // Validate Floor Selection
+    function validateFloorSelection(floorSelect) {
         if (floorSelect.value === '0') {
             alert("Please select a floor.");
             return false;
         }
+        return true;
+    }
 
-        // Check if flat is selected
+    // Validate Flat Selection
+    function validateFlatSelection(flatSelect) {
         if (flatSelect.value === '0') {
             alert("Please select a flat.");
             return false;
         }
+        return true;
+    }
 
-        // Check if either owner or rental is selected
+    // Validate "Who are you?" Selection (Owner or Rental)
+    function validateWhoSelection(ownerRadio, rentalRadio) {
         if (!ownerRadio.checked && !rentalRadio.checked) {
             alert("Please select who you are (Owner or Rental).");
             return false;
         }
+        return true;
+    }
 
-        // Check if purchase date is required and filled
+    // Validate Purchase Date for Owner
+    function validatePurchaseDate(ownerRadio, purchaseDate) {
         if (ownerRadio.checked && purchaseDate.value === '') {
             alert("Please select a purchase date.");
             return false;
         }
+        return true;
+    }
 
-        // Check if rental date is required and filled
+    // Validate Rental Date for Rental
+    function validateRentalDate(rentalRadio, rentalDate) {
         if (rentalRadio.checked && rentalDate.value === '') {
             alert("Please select a rental date.");
             return false;
         }
-
-        // If all validations pass, submit the form
-        event.target.submit();
+        return true;
     }
 </script>
 
